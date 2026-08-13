@@ -186,7 +186,7 @@ With `CHAOS_INTERVAL: 10` over a `TOTAL_CHAOS_DURATION: 30`, the experiment ran 
 
 ### Automated Verification
 
-Rather than eyeball a curl loop, [`verify-chaos-resilience.sh`](../chaos-tests/verify-chaos-resilience.sh) is a real pass/fail test:
+Rather than eyeball a curl loop, [`verify-chaos-resilience.sh`](chaos-tests/verify-chaos-resilience.sh) is a real pass/fail test:
 
 - Polls the app's Route once per second
 - Tracks total requests and failures independently of Litmus's own scoring
