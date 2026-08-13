@@ -12,6 +12,9 @@ A small HA demo app exists specifically as a stable, observable chaos target:
 - Fronted by a `Service` (ClusterIP, port 8080) and an OpenShift `Route`
 - Metrics exposed natively via haproxy's built-in Prometheus exporter (`/metrics` on port 8405), scraped by platform user-workload monitoring
 
+<img width="1536" height="1024" alt="OCP_4 20_primary_setup_Aug 11, 2026, 11_10_07 PM" src="https://github.com/user-attachments/assets/fb24a4e4-3d91-4468-bacb-ec62b2854eea" />
+
+
 ## Cluster Verification (Pre-Test)
 
 Before running any chaos experiment, confirmed the cluster and target app were in a known-good state:
