@@ -1,6 +1,6 @@
 # Chaos Engineering with Litmus — Configuration, Test, and Results
 
-This document covers the chaos engineering piece of the primary site build in isolation: cluster verification before testing, how Litmus Chaos was configured, the actual experiment run, and the measured result. It intentionally excludes cluster installation and infrastructure setup — see [`primary-site-runbook.md`](./primary-site-runbook.md) for that.
+This document covers the chaos engineering piece of the primary site build in isolation: cluster verification before testing, how Litmus Chaos was configured, the actual experiment run, and the measured result. It intentionally excludes cluster installation and infrastructure setup. I'll upload the infrastructure setup Terraform files and steps later.
 
 ## Target Application
 
