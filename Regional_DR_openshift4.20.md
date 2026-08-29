@@ -27,6 +27,16 @@ Same disconnected discipline as Part 1 — every image and operator mirrored int
 
 Full command sequence and configs for each step are in [`/setup`](./setup).
 
+```
+setup/
+├── 01-submariner-broker.yaml          # Broker CR in default-broker namespace
+├── 02-submariner-config.yaml          # SubmarinerConfig + ManagedClusterAddOn (Primary + DR)
+├── 03-mirrorpeer.yaml                 # MirrorPeer tying the two StorageClusters together
+├── 04-drcluster.yaml                  # DRCluster x2, referencing the auto-created S3 profiles
+├── 05-drpolicy.yaml                   # DRPolicy referencing both DRClusters
+└── SETUP.md                           # the actual command sequence, in order
+```
+
 ## Running the test
 
 ```bash
@@ -45,6 +55,13 @@ psql -c "SELECT count(*), max(ts) FROM heartbeat;"
 
 Full test script and step-by-step in [`/test`](./test).
 
+```
+test/
+├── app.yaml                 # Postgres + PVC + Service + writer CronJob (the one i used)
+├── drpc.yaml                # Placement (with scheduling-disable annotation) + DRPlacementControl
+├── failover.sh              # the actual commands, in sequence, as a real script
+└── TEST.md                  # what the script does and how to read the output
+```
 
 ## Verification
 
