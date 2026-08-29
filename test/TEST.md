@@ -35,8 +35,8 @@ Given that, completing the test meant redeploying the app manually on DR:
 
 ```bash
 # image needs to exist on DR's own registry too -- easy to miss
-podman pull registry.primary.ocplab.internal:8443/rhel9/postgresql-15:latest
-podman tag registry.primary.ocplab.internal:8443/rhel9/postgresql-15:latest <dr-registry>/rhel9/postgresql-15:latest
+podman pull <primary-registry>/rhel9/postgresql-15:latest --tls-verify=false
+podman tag <primary-registry>/rhel9/postgresql-15:latest <dr-registry>/rhel9/postgresql-15:latest
 podman push <dr-registry>/rhel9/postgresql-15:latest --tls-verify=false --remove-signatures
 
 oc --kubeconfig="$DR_KUBECONFIG" apply -f app.yaml   # minus the PVC block -- it already exists via VRG restore
@@ -49,14 +49,17 @@ a UID the DR pod can't touch, and the container will crash-loop on a
 permissions error. Check first:
 
 ```bash
-oc --kubeconfig="$PRIMARY_KUBECONFIG" get namespace inventory-db -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}'
-oc --kubeconfig="$DR_KUBECONFIG" get namespace inventory-db -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}'
+oc --kubeconfig="$PRIMARY_KUBECONFIG" get namespace inventory-db \
+  -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}'
+oc --kubeconfig="$DR_KUBECONFIG" get namespace inventory-db \
+  -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}'
 ```
 
 If they differ, fix ownership before starting the pod:
 
 ```bash
-oc --kubeconfig="$DR_KUBECONFIG" debug node/<node-hosting-the-volume> -- chroot /host bash -c "chown -R <dr-uid>:<dr-gid> /var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount/userdata"
+oc --kubeconfig="$DR_KUBECONFIG" debug node/<node-hosting-the-volume> -- \
+  chroot /host bash -c "chown -R <dr-uid>:<dr-gid> /var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount/userdata"
 ```
 
 ## Reading the results
@@ -64,7 +67,8 @@ oc --kubeconfig="$DR_KUBECONFIG" debug node/<node-hosting-the-volume> -- chroot 
 ```bash
 date -u   # RTO end point
 oc --kubeconfig="$DR_KUBECONFIG" get pods -n inventory-db
-oc --kubeconfig="$DR_KUBECONFIG" exec -n inventory-db deploy/postgres -- psql -U dbadmin -d inventory -c "SELECT count(*), max(ts) FROM heartbeat;"
+oc --kubeconfig="$DR_KUBECONFIG" exec -n inventory-db deploy/postgres -- \
+  psql -U dbadmin -d inventory -c "SELECT count(*), max(ts) FROM heartbeat;"
 ```
 
 **RPO** = baseline timestamp (from `failover.sh`'s first block) minus the
@@ -78,7 +82,28 @@ hides which parts are actually production-ready automation.
 ## Failback
 
 ```bash
-oc --kubeconfig="$HUB_KUBECONFIG" patch drpc inventory-db-drpc -n inventory-db --type merge  -p '{"spec":{"action":"Relocate","preferredCluster":"primary"}}'
+oc --kubeconfig="$HUB_KUBECONFIG" patch drpc inventory-db-drpc -n inventory-db --type merge \
+  -p '{"spec":{"action":"Relocate","preferredCluster":"primary"}}'
 oc --kubeconfig="$DR_KUBECONFIG" scale deployment postgres -n inventory-db --replicas=0
 ```
 Same considerations apply symmetrically in reverse.
+
+## Why is RTO so much higher than RPO?
+
+RPO is just a data comparison — two timestamps, fixed the moment failover
+happens, independent of how long recovery takes afterward. RTO is real
+wall-clock time to get the app serving again, so it absorbs every step taken,
+automated or not.
+
+Roughly where the ~44 minutes went in this run:
+
+| Phase | ~Time | What it was |
+|---|---|---|
+| Storage failover + quiesce | ~8 min | `DRPC` patched, pod scaled down, Ceph RBD role swap confirmed — the real, automated core |
+| Diagnosing the `kubeObjectProtection`/OADP gap | ~21 min | Enabled it expecting auto-restore, then root-caused why it wasn't working |
+| Manual redeploy, missing image on DR's registry | ~4 min | One-time setup miss, not a repeatable cost |
+| UID-range crash loop | ~12 min | Diagnosed and fixed the permissions issue in TEST.md above |
+
+The platform's actual automated mechanism is the ~8 minutes. The rest is
+one real, still-open gap plus two one-time misses that a pre-built runbook
+(this repo) removes almost entirely on a second run.
