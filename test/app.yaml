@@ -1,0 +1,76 @@
+# Apply on Primary only. A real, continuously-writing app, not a static one --
+# the writer CronJob is what makes a genuine RPO measurement possible later.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: inventory-db
+  labels:
+    app: inventory-db
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ocs-storagecluster-ceph-rbd
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: inventory-db
+  labels:
+    app: inventory-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+    spec:
+      containers:
+        - name: postgres
+          image: <your-registry>/rhel9/postgresql-15:latest
+          env:
+            - {name: POSTGRESQL_USER, value: dbadmin}
+            - {name: POSTGRESQL_PASSWORD, value: changeme}
+            - {name: POSTGRESQL_DATABASE, value: inventory}
+          ports: [{containerPort: 5432}]
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/pgsql/data}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: postgres-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: inventory-db
+spec:
+  selector: {app: postgres}
+  ports: [{port: 5432}]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-writer
+  namespace: inventory-db
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: writer
+              image: <your-registry>/rhel9/postgresql-15:latest
+              env: [{name: PGPASSWORD, value: changeme}]
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  psql -h postgres -U dbadmin -d inventory -c \
+                    "CREATE TABLE IF NOT EXISTS heartbeat (ts timestamptz DEFAULT now()); INSERT INTO heartbeat DEFAULT VALUES;"

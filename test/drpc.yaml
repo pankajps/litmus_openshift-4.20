@@ -1,0 +1,46 @@
+# Apply on the ACM Hub. Namespace must exist on Hub too (create it first).
+#
+# The scheduling-disable annotation on Placement is required -- without it,
+# DRPlacementControl fails immediately with "placement ... must be disabled
+# in order for Ramen to be the scheduler". ACM's own scheduler and RamenDR's
+# scheduler will otherwise fight over the same Placement object.
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: inventory-db-placement
+  namespace: inventory-db
+  annotations:
+    cluster.open-cluster-management.io/experimental-scheduling-disable: "true"
+spec:
+  clusterSets: [default]
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - {key: name, operator: In, values: [primary]}
+---
+apiVersion: ramendr.openshift.io/v1alpha1
+kind: DRPlacementControl
+metadata:
+  name: inventory-db-drpc
+  namespace: inventory-db
+spec:
+  drPolicyRef:
+    name: dr-policy-primary-dr
+  placementRef:
+    name: inventory-db-placement
+    kind: Placement
+  pvcSelector:
+    matchLabels:
+      app: inventory-db
+  preferredCluster: primary
+  # Optional: enables RamenDR's OADP-backed auto-restore of the app's own
+  # Kubernetes manifests (Deployment/Service), not just the storage data.
+  # In this build, this hit a real limitation -- RamenDR's own dynamically
+  # generated BackupStorageLocation object has no way to trust a self-signed
+  # internal S3 endpoint, and regenerates itself on every reconcile so a
+  # manual patch doesn't hold. Left here, commented out, as the real,
+  # correct field to use once that's resolved (e.g. via a properly
+  # CA-signed S3 endpoint).
+  # kubeObjectProtection:
+  #   captureInterval: 5m
