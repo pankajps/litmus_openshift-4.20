@@ -93,5 +93,6 @@ None of these are hidden in the number above — they're why the total RTO is 44
 ## Coming next
 
 Getting OADP/Velero working properly and closing the self-signed cert gap for real, so the manifest-restore side is fully automated too.
+Also experimenting with Krkn for chaos testing on the DR side
 
 #OpenShift #RegionalDR #RamenDR #Ceph #Submariner #Kubernetes #SRE
