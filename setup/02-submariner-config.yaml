@@ -1,0 +1,28 @@
+# Apply on the ACM Hub cluster, once per spoke (Primary and DR).
+# Replace <spoke-namespace> with the real ManagedCluster name (e.g. primary / dr).
+#
+# Before applying: label a gateway node on the target spoke:
+#   oc --kubeconfig=<spoke-kubeconfig> label node <worker-node> submariner.io/gateway=true
+#
+# If the endpoint is fully private (no real public IP, direct VPC/VNet peering only),
+# also annotate the same node so Submariner skips public-IP auto-detection, which can
+# otherwise hang indefinitely on some cloud metadata services:
+#   oc --kubeconfig=<spoke-kubeconfig> annotate node <worker-node> \
+#     "gateway.submariner.io/public-ip=ipv4:<worker-node-private-ip>" --overwrite
+apiVersion: submarineraddon.open-cluster-management.io/v1alpha1
+kind: SubmarinerConfig
+metadata:
+  name: submariner
+  namespace: <spoke-namespace>
+spec:
+  cableDriver: vxlan
+  gatewayConfig:
+    gateways: 1
+---
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ManagedClusterAddOn
+metadata:
+  name: submariner
+  namespace: <spoke-namespace>
+spec:
+  installNamespace: submariner-operator

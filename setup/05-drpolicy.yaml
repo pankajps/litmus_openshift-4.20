@@ -1,0 +1,10 @@
+# Apply on the ACM Hub cluster, after both DRClusters show Validated: True.
+apiVersion: ramendr.openshift.io/v1alpha1
+kind: DRPolicy
+metadata:
+  name: dr-policy-primary-dr
+spec:
+  drClusters:
+    - primary
+    - dr
+  schedulingInterval: 5m

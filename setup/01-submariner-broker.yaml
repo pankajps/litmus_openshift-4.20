@@ -1,0 +1,12 @@
+# Apply on the ACM Hub cluster.
+# Creates the Submariner Broker in the default-broker namespace
+# (auto-created by ACM's default ManagedClusterSet).
+apiVersion: submariner.io/v1alpha1
+kind: Broker
+metadata:
+  name: submariner-broker
+  namespace: default-broker
+  labels:
+    cluster.open-cluster-management.io/backup: submariner
+spec:
+  globalnetEnabled: false

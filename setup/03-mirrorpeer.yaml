@@ -1,0 +1,32 @@
+# Apply on the ACM Hub cluster.
+# Ties the two sites' StorageClusters together and, via manageS3: true,
+# auto-provisions the S3 profiles RamenDR needs later.
+#
+# Before this will fully succeed, enable multi-cluster service export on
+# each spoke's own StorageCluster (this is what makes the real Ceph
+# provider endpoint reachable cross-cluster over the Submariner tunnel):
+#   oc --kubeconfig=<primary-kubeconfig> patch storagecluster ocs-storagecluster \
+#     -n openshift-storage --type merge \
+#     -p '{"spec":{"network":{"multiClusterService":{"enabled":true,"clusterID":"primary"}}}}'
+#   oc --kubeconfig=<dr-kubeconfig> patch storagecluster ocs-storagecluster \
+#     -n openshift-storage --type merge \
+#     -p '{"spec":{"network":{"multiClusterService":{"enabled":true,"clusterID":"dr"}}}}'
+# (this triggers a brief, expected MON failover on each cluster)
+apiVersion: multicluster.odf.openshift.io/v1alpha1
+kind: MirrorPeer
+metadata:
+  name: mirrorpeer-primary-dr
+spec:
+  manageS3: true
+  schedulingIntervals:
+    - 5m
+    - 15m
+  items:
+    - clusterName: primary
+      storageClusterRef:
+        name: ocs-storagecluster
+        namespace: openshift-storage
+    - clusterName: dr
+      storageClusterRef:
+        name: ocs-storagecluster
+        namespace: openshift-storage
