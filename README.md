@@ -1,6 +1,7 @@
-# Chaos Engineering with Litmus — Configuration, Test, and Results
+# part 1 - Chaos Engineering with Litmus — Configuration, Test, and Results
+# Part 2 (Regional DR on OpenShift 4.20 — RamenDR + Ceph RBD Failover Test) [`Regional_DR_openshift4.20`](Regional_DR_openshift4.20.md) Added
 
-This document covers the chaos engineering piece of the primary site build in isolation: cluster verification before testing, how Litmus Chaos was configured, the actual experiment run, and the measured result. It intentionally excludes cluster installation and infrastructure setup. I'll upload the infrastructure setup Terraform files and steps later.
+This part 1 document covers the chaos engineering component of the primary site build in isolation: cluster verification before testing, how Litmus Chaos was configured, the actual experiment run, and the measured results. It intentionally excludes cluster installation and infrastructure setup. I'll upload the infrastructure setup Terraform files and steps later.
 
 ## Target Application
 
@@ -229,3 +230,6 @@ Re-ran the same experiment a second time from a clean state to confirm the resul
 The `haproxy-chaos-demo` Service kept serving every single request while Litmus deleted both of its underlying pods, in separate cycles, over a 30-second window. Kubernetes' own scheduling and the Service's endpoint tracking handled the failover — no manual intervention, no dropped traffic, independently verified two different ways (a custom polling script and Litmus's own probe scoring).
 
 **Next**: a deeper technical breakdown of this Litmus setup (Part 1.5, next weekend), followed by the DR site build with cross-site replication and backup/restore via OADP and Velero (Part 2).
+
+Part 2 (Regional DR on OpenShift 4.20 — RamenDR + Ceph RBD Failover Test)
+[`Regional_DR_openshift4.20`](Regional_DR_openshift4.20.md)
